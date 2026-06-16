@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow — Kanban Board</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════
+       APP HEADER
+  ═══════════════════════════════════════════════ -->
+  <header class="app-header" role="banner">
+    <div class="header-left">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <span class="brand-mark-bar b1"></span>
+          <span class="brand-mark-bar b2"></span>
+          <span class="brand-mark-bar b3"></span>
+        </div>
+        <span class="brand-name">TaskFlow</span>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="search-wrap">
+        <svg class="search-ico" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M13 13l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <input id="searchInput" type="search" placeholder="Search cards…"
+               aria-label="Search all cards" autocomplete="off" />
+        <kbd class="search-hint">Ctrl K</kbd>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button class="toolbar-btn" id="exportBtn" title="Export board as JSON" aria-label="Export board">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M10 3v9m0 0l-3-3m3 3l3-3M4 14v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Export</span>
+      </button>
+      <label class="toolbar-btn import-label" title="Import board JSON" aria-label="Import board">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M10 17V8m0 0l-3 3m3-3l3 3M4 6V4a1 1 0 011-1h10a1 1 0 011 1v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Import</span>
+        <input type="file" id="importInput" accept=".json" aria-label="Import JSON file" />
+      </label>
+      <button class="toolbar-btn theme-btn" id="themeToggle" aria-label="Toggle dark mode" title="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <svg class="icon-moon" viewBox="0 0 20 20" fill="none"><path d="M17.5 12A7.5 7.5 0 018 2.5a7.5 7.5 0 100 15 7.5 7.5 0 009.5-5.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn-add-col" id="addColBtn" aria-label="Add new column">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Add Column
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════
+       STATS BAR
+  ═══════════════════════════════════════════════ -->
+  <div class="stats-bar" role="region" aria-label="Board statistics">
+    <div class="stat-item">
+      <span class="stat-val" id="statTotal">0</span>
+      <span class="stat-key">Total</span>
+    </div>
+    <div class="stat-sep" aria-hidden="true"></div>
+    <div class="stat-item">
+      <span class="stat-val" id="statDone">0</span>
+      <span class="stat-key">Done</span>
+    </div>
+    <div class="stat-sep" aria-hidden="true"></div>
+    <div class="stat-item">
+      <span class="stat-val pct" id="statPct">0%</span>
+      <span class="stat-key">Complete</span>
+    </div>
+    <div class="stat-progress" role="progressbar" aria-label="Completion progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+      <div class="stat-progress-fill" id="statFill"></div>
+    </div>
+    <div class="stat-filter-group" role="group" aria-label="Filter by label">
+      <span class="stat-key" style="align-self:center">Filter:</span>
+      <button class="label-filter active" data-label="all">All</button>
+      <button class="label-filter" data-label="bug" style="--lc:#ef4444">Bug</button>
+      <button class="label-filter" data-label="feature" style="--lc:#6366f1">Feature</button>
+      <button class="label-filter" data-label="design" style="--lc:#ec4899">Design</button>
+      <button class="label-filter" data-label="research" style="--lc:#f59e0b">Research</button>
+      <button class="label-filter" data-label="docs" style="--lc:#14b8a6">Docs</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       BOARD
+  ═══════════════════════════════════════════════ -->
+  <main class="board-scroll" role="main">
+    <div class="board" id="board" role="region" aria-label="Kanban board"></div>
+  </main>
+
+  <!-- ═══════════════════════════════════════════════
+       CARD EDIT MODAL
+  ═══════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="cardModal" role="dialog" aria-modal="true"
+       aria-labelledby="modalHeading" hidden>
+    <div class="modal">
+      <header class="modal-head">
+        <h2 class="modal-heading" id="modalHeading">Edit card</h2>
+        <button class="modal-close" id="modalClose" aria-label="Close">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="modal-body">
+        <label class="field-label" for="cardTitleInput">Title</label>
+        <input class="field-input" id="cardTitleInput" type="text"
+               placeholder="What needs to happen?" maxlength="120" />
+
+        <label class="field-label" for="cardDescInput">Description</label>
+        <textarea class="field-input" id="cardDescInput" rows="3"
+                  placeholder="Optional details, steps, or notes…"></textarea>
+
+        <div class="field-row">
+          <div class="field-col">
+            <label class="field-label" for="cardDueInput">Due date</label>
+            <input class="field-input" id="cardDueInput" type="date" />
+          </div>
+          <div class="field-col">
+            <label class="field-label" for="cardLabelInput">Label</label>
+            <select class="field-input" id="cardLabelInput">
+              <option value="">— none —</option>
+              <option value="bug">🔴 Bug</option>
+              <option value="feature">🟣 Feature</option>
+              <option value="design">🩷 Design</option>
+              <option value="research">🟡 Research</option>
+              <option value="docs">🩵 Docs</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="field-label">Priority</label>
+        <div class="priority-group" role="radiogroup" aria-label="Card priority">
+          <label class="priority-opt">
+            <input type="radio" name="cardPriority" value="low" />
+            <span class="pri-chip low">Low</span>
+          </label>
+          <label class="priority-opt">
+            <input type="radio" name="cardPriority" value="medium" checked />
+            <span class="pri-chip medium">Medium</span>
+          </label>
+          <label class="priority-opt">
+            <input type="radio" name="cardPriority" value="high" />
+            <span class="pri-chip high">High</span>
+          </label>
+        </div>
+
+        <!-- Mobile: move-to column -->
+        <div class="move-to-section" id="moveToSection">
+          <label class="field-label">Move to column</label>
+          <div class="move-to-btns" id="moveToBtns"></div>
+        </div>
+      </div>
+      <footer class="modal-foot">
+        <button class="btn btn-danger" id="modalDelete">Delete card</button>
+        <div style="display:flex;gap:.5rem">
+          <button class="btn btn-ghost" id="modalCancel">Cancel</button>
+          <button class="btn btn-primary" id="modalSave">Save changes</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       ADD COLUMN MODAL
+  ═══════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="colModal" role="dialog" aria-modal="true"
+       aria-labelledby="colModalHeading" hidden>
+    <div class="modal modal-sm">
+      <header class="modal-head">
+        <h2 class="modal-heading" id="colModalHeading">New column</h2>
+        <button class="modal-close" id="colModalClose" aria-label="Close">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="modal-body">
+        <label class="field-label" for="colNameInput">Column name</label>
+        <input class="field-input" id="colNameInput" type="text"
+               placeholder="e.g. Review, Blocked, QA…" maxlength="40" />
+        <label class="field-label" style="margin-top:.75rem">Accent color</label>
+        <div class="color-swatches" id="colorSwatches" role="radiogroup" aria-label="Column color">
+          <label class="swatch-opt"><input type="radio" name="colColor" value="#6366f1" checked/><span class="swatch" style="background:#6366f1"></span></label>
+          <label class="swatch-opt"><input type="radio" name="colColor" value="#10b981"/><span class="swatch" style="background:#10b981"></span></label>
+          <label class="swatch-opt"><input type="radio" name="colColor" value="#f59e0b"/><span class="swatch" style="background:#f59e0b"></span></label>
+          <label class="swatch-opt"><input type="radio" name="colColor" value="#ef4444"/><span class="swatch" style="background:#ef4444"></span></label>
+          <label class="swatch-opt"><input type="radio" name="colColor" value="#ec4899"/><span class="swatch" style="background:#ec4899"></span></label>
+          <label class="swatch-opt"><input type="radio" name="colColor" value="#14b8a6"/><span class="swatch" style="background:#14b8a6"></span></label>
+          <label class="swatch-opt"><input type="radio" name="colColor" value="#8b5cf6"/><span class="swatch" style="background:#8b5cf6"></span></label>
+          <label class="swatch-opt"><input type="radio" name="colColor" value="#0ea5e9"/><span class="swatch" style="background:#0ea5e9"></span></label>
+        </div>
+      </div>
+      <footer class="modal-foot">
+        <div></div>
+        <div style="display:flex;gap:.5rem">
+          <button class="btn btn-ghost" id="colModalCancel">Cancel</button>
+          <button class="btn btn-primary" id="colModalSave">Create column</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toastZone" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
